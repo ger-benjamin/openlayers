@@ -6,15 +6,16 @@ import VectorSource from '../src/ol/source/Vector.js';
 import View from '../src/ol/View.js';
 import {Fill, Icon, Style, Text} from '../src/ol/style.js';
 
+const fontSize = '10';
 const size = 20;
+const strokeColor = 'black';
+const fillColor = 'yellow';
 
-function getStyle(feature) {
-  //const clusterSize = feature.length().toString().length();
-  const clusterSize = feature.get('clusterSize');
-  const length = clusterSize.toString().length;
+const styleCanvasCache = {};
+function getStyleCanevas(stringLength) {
   const canvas = document.createElement('canvas');
   const strokeSize = 1;
-  const width = size * 2 + length;
+  const width = size + ((stringLength <= 1 ? 2 : stringLength) * fontSize) / 2;
   const height = size;
   canvas.width = width;
   canvas.height = height;
@@ -27,21 +28,45 @@ function getStyle(feature) {
     (height - 2 * strokeSize) / 2
   );
   context.lineWidth = strokeSize;
-  context.strokeStyle = 'black';
-  context.fillStyle = 'yellow';
+  context.strokeStyle = strokeColor;
+  context.fillStyle = fillColor;
   context.stroke();
   context.fill();
+  return new Icon({
+    img: canvas,
+    imgSize: [canvas.width, canvas.height],
+  });
+}
+
+const styleTextCache = {};
+function getStyleText(clusterSize) {
+  return new Text({
+    text: clusterSize.toString(),
+    font: `bold ${fontSize}px sans-serif`,
+    offsetY: 1.5,
+    fill: new Fill({
+      color: strokeColor,
+    }),
+  });
+}
+
+function getStyle(feature) {
+  //const clusterSize = feature.length().toString().length();
+  const clusterSize = feature.get('clusterSize');
+  const stringLength = clusterSize.toString().length;
+  let styleCanevas = styleCanvasCache[stringLength];
+  if (!styleCanevas) {
+    styleCanevas = getStyleCanevas(stringLength);
+    styleCanvasCache[stringLength] = styleCanevas;
+  }
+  let styleText = styleTextCache[clusterSize];
+  if (!styleText) {
+    styleText = getStyleText(clusterSize);
+    styleTextCache[clusterSize] = styleText;
+  }
   return new Style({
-    text: new Text({
-      text: clusterSize.toString(),
-      fill: new Fill({
-        color: context.strokeStyle,
-      }),
-    }),
-    image: new Icon({
-      img: canvas,
-      imgSize: [canvas.width, canvas.height],
-    }),
+    text: styleText,
+    image: styleCanevas,
   });
 }
 
@@ -50,15 +75,16 @@ const styles = {
 };
 
 const styleKeys = ['badge'];
-const count = 5;
+const count = 20;
 const features = new Array(count);
 const e = 4500000;
 for (let i = 0; i < count; ++i) {
   const coordinates = [2 * e * Math.random() - e, 2 * e * Math.random() - e];
   features[i] = new Feature(new Point(coordinates));
+  const length = Math.ceil(Math.random() * 5);
   features[i].set(
     'clusterSize',
-    Math.floor(Math.random() * Math.pow(10, i + 1))
+    Math.floor(Math.random() * Math.pow(10, length))
   );
   features[i].setStyle(
     styles[styleKeys[Math.floor(Math.random() * styleKeys.length)]]
