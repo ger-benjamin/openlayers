@@ -2,6 +2,7 @@ import Feature from '../src/ol/Feature.js';
 import Map from '../src/ol/Map.js';
 import Point from '../src/ol/geom/Point.js';
 import View from '../src/ol/View.js';
+import LayerGroup from '../src/ol/layer/Group.js';
 import {
   Circle as CircleStyle,
   Fill,
@@ -68,8 +69,11 @@ const raster = new TileLayer({
   source: new OSM(),
 });
 
+const toto = new LayerGroup();
+toto.getLayers().push(clusters);
+
 const map = new Map({
-  layers: [raster, clusters],
+  layers: [raster, toto],
   target: 'map',
   view: new View({
     center: [0, 0],
