@@ -1,8 +1,8 @@
 import Feature from '../src/ol/Feature.js';
+import LayerGroup from '../src/ol/layer/Group.js';
 import Map from '../src/ol/Map.js';
 import Point from '../src/ol/geom/Point.js';
 import View from '../src/ol/View.js';
-import LayerGroup from '../src/ol/layer/Group.js';
 import {
   Circle as CircleStyle,
   Fill,

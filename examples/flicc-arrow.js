@@ -1,13 +1,25 @@
 import Feature from '../src/ol/Feature.js';
 import LineString from '../src/ol/geom/LineString.js';
 import Map from '../src/ol/Map.js';
+import OSM from '../src/ol/source/OSM.js';
 import Point from '../src/ol/geom/Point.js';
-import TileJSON from '../src/ol/source/TileJSON.js';
 import VectorSource from '../src/ol/source/Vector.js';
 import View from '../src/ol/View.js';
-import {Icon, Stroke, Style} from '../src/ol/style.js';
+import {Fill, Icon, RegularShape, Stroke, Style} from '../src/ol/style.js';
 import {Tile as TileLayer, Vector as VectorLayer} from '../src/ol/layer.js';
 import {fromLonLat} from '../src/ol/proj.js';
+
+const color = '#48d1cc';
+const iconSize = 20;
+
+const map = new Map({
+  layers: [],
+  target: document.getElementById('map'),
+  view: new View({
+    center: fromLonLat([2.896372, 44.6024]),
+    zoom: 3,
+  }),
+});
 
 const rome = new Feature({
   geometry: new Point(fromLonLat([12.5, 41.9])),
@@ -30,11 +42,33 @@ const berlin = new Feature({
   'target': 2,
 });
 
-const features = [rome, madrid, paris, london, berlin];
+const features = [madrid, rome, paris, london, berlin];
 
 const vectorSource = new VectorSource({
   features: features,
 });
+
+const getGeometry = function (lineGeometry, viewResolution) {
+  const sx = lineGeometry.getFirstCoordinate()[0];
+  const sy = lineGeometry.getFirstCoordinate()[1];
+  const ex = lineGeometry.getLastCoordinate()[0];
+  const ey = lineGeometry.getLastCoordinate()[1];
+  const diffX = sx - ex;
+  const diffY = sy - ey;
+  const orientation = Math.abs(Math.atan(diffY / diffX));
+  const projection = map.getView().getProjection();
+  const resolution = projection.getPointResolutionFunc()(
+    viewResolution,
+    lineGeometry.getLastCoordinate()
+  );
+  const shift = iconSize * resolution;
+  const shiftedX = Math.cos(orientation) * shift * Math.sign(diffX);
+  const shiftedY = Math.sin(orientation) * shift * Math.sign(diffY);
+  return new LineString([
+    [sx - shiftedX, sy - shiftedY],
+    [ex + shiftedX, ey + shiftedY],
+  ]);
+};
 
 const lineFeatures = [];
 let previousFeature = null;
@@ -54,25 +88,29 @@ features.forEach((feature) => {
   previousFeature = feature;
 });
 
-function getLineStyle(feature) {
-  const geometry = feature.getGeometry();
+function getLineStyle(feature, resolution) {
+  const geometry = getGeometry(feature.getGeometry(), resolution);
   const styles = [
     new Style({
-      stroke: new Stroke({color: '#0088AA', width: 2}),
+      geometry,
+      stroke: new Stroke({color, width: 4}),
     }),
   ];
   geometry.forEachSegment(function (start, end) {
     const dx = end[0] - start[0];
     const dy = end[1] - start[1];
     const rotation = Math.atan2(dy, dx);
+    const gravityCenter = (Math.sqrt(3) / 6) * iconSize;
     // arrows
     styles.push(
       new Style({
         geometry: new Point(end),
-        image: new Icon({
-          color: '#0088AA',
-          src: 'data/arrow.png',
-          anchor: [0.75, 0.5],
+        image: new RegularShape({
+          fill: new Fill({color}),
+          radius: iconSize / 2,
+          points: 3,
+          angle: Math.PI / 2,
+          displacement: [-gravityCenter, 0],
           rotateWithView: true,
           rotation: -rotation,
         }),
@@ -98,22 +136,15 @@ const vectorLayer = new VectorLayer({
       color: '#8959A8',
       crossOrigin: 'anonymous',
       src: 'data/dot.svg',
+      scale: iconSize / 20,
     }),
   }),
 });
 
-const rasterLayer = new TileLayer({
-  source: new TileJSON({
-    url: 'https://a.tiles.mapbox.com/v3/aj.1x1-degrees.json?secure=1',
-    crossOrigin: '',
-  }),
+const osm = new TileLayer({
+  source: new OSM(),
 });
 
-const map = new Map({
-  layers: [rasterLayer, vectorLayer, lineVectorLayer],
-  target: document.getElementById('map'),
-  view: new View({
-    center: fromLonLat([2.896372, 44.6024]),
-    zoom: 3,
-  }),
-});
+map.addLayer(osm);
+map.addLayer(vectorLayer);
+map.addLayer(lineVectorLayer);
