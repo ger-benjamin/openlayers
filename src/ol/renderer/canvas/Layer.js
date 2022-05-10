@@ -120,6 +120,7 @@ class CanvasLayerRenderer extends LayerRenderer {
       pixelContext.drawImage(image, col, row, 1, 1, 0, 0, 1, 1);
       data = pixelContext.getImageData(0, 0, 1, 1).data;
     } catch (err) {
+      pixelContext = null;
       return null;
     }
     return data;
@@ -154,7 +155,8 @@ class CanvasLayerRenderer extends LayerRenderer {
       target.style.opacity === '' &&
       opacity === 1 &&
       (!opt_backgroundColor ||
-        (target.style.backgroundColor &&
+        (target &&
+          target.style.backgroundColor &&
           equals(
             asArray(target.style.backgroundColor),
             asArray(opt_backgroundColor)
@@ -183,9 +185,6 @@ class CanvasLayerRenderer extends LayerRenderer {
       style.position = 'absolute';
       style.width = '100%';
       style.height = '100%';
-      if (opt_backgroundColor) {
-        style.backgroundColor = opt_backgroundColor;
-      }
       context = createCanvasContext2D();
       const canvas = context.canvas;
       container.appendChild(canvas);
@@ -195,6 +194,13 @@ class CanvasLayerRenderer extends LayerRenderer {
       style.transformOrigin = 'top left';
       this.container = container;
       this.context = context;
+    }
+    if (
+      !this.containerReused &&
+      opt_backgroundColor &&
+      !this.container.style.backgroundColor
+    ) {
+      this.container.style.backgroundColor = opt_backgroundColor;
     }
   }
 

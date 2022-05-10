@@ -1,5 +1,39 @@
 ## Upgrade notes
 
+### Next Release
+
+#### Deprecated `tilePixelRatio` option for data tile sources.
+
+If you were previously trying to scale data tiles using the `tilePixelRatio` property for data tile sources (this is rare), you should now use the explicit `tileSize` and `tileGrid` properties.  The source's `tileSize` represents the source tile dimensions and the tile grid's `tileSize` represents the desired rendered dimensions.
+
+```js
+const source = new DataTileSource({
+  tileSize: [512, 512], // source tile size
+  tileGrid: createXYZ({tileSize: [256, 256]}), // rendered tile size
+});
+```
+
+#### Fixed coordinate dimension handling in `ol/proj`'s `addCoordinateTransforms`
+
+The `forward` and `inverse` functions passed to `addCooordinateTransforms` now receive a coordinate with all dimensions of the original coordinate, not just two. If you previosly had coordinates with more than two dimensions and added a transform like
+```js
+addCoordinateTransforms(
+    'EPSG:4326',
+    new Projection({code: 'latlong', units: 'degrees'}),
+    function(coordinate) { return coordinate.reverse(); },
+    function(coordinate) { return coordinate.reverse(); }
+);
+```
+you have to change that to
+```js
+addCoordinateTransforms(
+    'EPSG:4326',
+    new Projection({code: 'latlong', units: 'degrees'}),
+    function(coordinate) { return coordinate.slice(0, 2).reverse() },
+    function(coordinate) { return coordinate.slice(0, 2).reverse() }
+);
+```
+
 ### v6.14.0
 
 No special changes are required when upgrading to the 6.14.0 release.

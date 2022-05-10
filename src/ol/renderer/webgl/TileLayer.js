@@ -12,8 +12,11 @@ import {AttributeType} from '../../webgl/Helper.js';
 import {ELEMENT_ARRAY_BUFFER, STATIC_DRAW} from '../../webgl.js';
 import {
   apply as applyTransform,
-  compose as composeTransform,
   create as createTransform,
+  reset as resetTransform,
+  rotate as rotateTransform,
+  scale as scaleTransform,
+  translate as translateTransform,
 } from '../../transform.js';
 import {containsCoordinate, getIntersection, isEmpty} from '../../extent.js';
 import {
@@ -315,7 +318,6 @@ class WebGLTileLayerRenderer extends WebGLLayerRenderer {
     const tileLayer = this.getLayer();
     const tileSource = tileLayer.getRenderSource();
     const tileGrid = tileSource.getTileGridForProjection(viewState.projection);
-    const tilePixelRatio = tileSource.getTilePixelRatio(frameState.pixelRatio);
     const gutter = tileSource.getGutterForProjection(viewState.projection);
 
     const tileSourceKey = getUid(tileSource);
@@ -368,7 +370,6 @@ class WebGLTileLayerRenderer extends WebGLLayerRenderer {
                 tile: tile,
                 grid: tileGrid,
                 helper: this.helper,
-                tilePixelRatio: tilePixelRatio,
                 gutter: gutter,
               });
               tileTextureCache.set(cacheKey, tileTexture);
@@ -420,6 +421,7 @@ class WebGLTileLayerRenderer extends WebGLLayerRenderer {
     const tileLayer = this.getLayer();
     const tileSource = tileLayer.getRenderSource();
     const tileGrid = tileSource.getTileGridForProjection(viewState.projection);
+    const gutter = tileSource.getGutterForProjection(viewState.projection);
     const extent = getRenderExtent(frameState, frameState.extent);
     const z = tileGrid.getZForResolution(
       viewState.resolution,
@@ -518,6 +520,10 @@ class WebGLTileLayerRenderer extends WebGLLayerRenderer {
       const tileSize = toSize(tileGrid.getTileSize(tileZ), this.tempSize_);
       const tileOrigin = tileGrid.getOrigin(tileZ);
 
+      const tileWidthWithGutter = tileSize[0] + 2 * gutter;
+      const tileHeightWithGutter = tileSize[1] + 2 * gutter;
+      const aspectRatio = tileWidthWithGutter / tileHeightWithGutter;
+
       const centerI =
         (centerX - tileOrigin[0]) / (tileSize[0] * tileResolution);
       const centerJ =
@@ -539,15 +545,20 @@ class WebGLTileLayerRenderer extends WebGLLayerRenderer {
         const tileCenterI = tileCoord[1];
         const tileCenterJ = tileCoord[2];
 
-        composeTransform(
+        resetTransform(this.tileTransform_);
+        scaleTransform(
           this.tileTransform_,
-          0,
-          0,
-          2 / ((frameState.size[0] * tileScale) / tileSize[0]),
-          -2 / ((frameState.size[1] * tileScale) / tileSize[1]),
-          viewState.rotation,
-          -(centerI - tileCenterI),
-          -(centerJ - tileCenterJ)
+          2 / ((frameState.size[0] * tileScale) / tileWidthWithGutter),
+          -2 / ((frameState.size[1] * tileScale) / tileWidthWithGutter)
+        );
+        rotateTransform(this.tileTransform_, viewState.rotation);
+        scaleTransform(this.tileTransform_, 1, 1 / aspectRatio);
+        translateTransform(
+          this.tileTransform_,
+          (tileSize[0] * (tileCenterI - centerI) - gutter) /
+            tileWidthWithGutter,
+          (tileSize[1] * (tileCenterJ - centerJ) - gutter) /
+            tileHeightWithGutter
         );
 
         this.helper.setUniformMatrixValue(
@@ -599,11 +610,11 @@ class WebGLTileLayerRenderer extends WebGLLayerRenderer {
         this.helper.setUniformFloatValue(Uniforms.DEPTH, depth);
         this.helper.setUniformFloatValue(
           Uniforms.TEXTURE_PIXEL_WIDTH,
-          tileSize[0]
+          tileWidthWithGutter
         );
         this.helper.setUniformFloatValue(
           Uniforms.TEXTURE_PIXEL_HEIGHT,
-          tileSize[1]
+          tileHeightWithGutter
         );
         this.helper.setUniformFloatValue(
           Uniforms.TEXTURE_RESOLUTION,
@@ -611,13 +622,22 @@ class WebGLTileLayerRenderer extends WebGLLayerRenderer {
         );
         this.helper.setUniformFloatValue(
           Uniforms.TEXTURE_ORIGIN_X,
-          tileOrigin[0] + tileCenterI * tileSize[0] * tileResolution
+          tileOrigin[0] +
+            tileCenterI * tileSize[0] * tileResolution -
+            gutter * tileResolution
         );
         this.helper.setUniformFloatValue(
           Uniforms.TEXTURE_ORIGIN_Y,
-          tileOrigin[1] - tileCenterJ * tileSize[1] * tileResolution
+          tileOrigin[1] -
+            tileCenterJ * tileSize[1] * tileResolution +
+            gutter * tileResolution
         );
-        this.helper.setUniformFloatVec4(Uniforms.RENDER_EXTENT, extent);
+        let gutterExtent = extent;
+        if (gutter > 0) {
+          gutterExtent = tileGrid.getTileCoordExtent(tileCoord);
+          getIntersection(gutterExtent, extent, gutterExtent);
+        }
+        this.helper.setUniformFloatVec4(Uniforms.RENDER_EXTENT, gutterExtent);
         this.helper.setUniformFloatValue(
           Uniforms.RESOLUTION,
           viewState.resolution

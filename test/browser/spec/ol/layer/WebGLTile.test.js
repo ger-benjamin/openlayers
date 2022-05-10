@@ -1,9 +1,11 @@
 import DataTileSource from '../../../../../src/ol/source/DataTile.js';
 import Map from '../../../../../src/ol/Map.js';
+import TileWMS from '../../../../../src/ol/source/TileWMS.js';
 import View from '../../../../../src/ol/View.js';
 import WebGLHelper from '../../../../../src/ol/webgl/Helper.js';
 import WebGLTileLayer from '../../../../../src/ol/layer/WebGLTile.js';
 import {createCanvasContext2D} from '../../../../../src/ol/dom.js';
+import {createXYZ} from '../../../../../src/ol/tilegrid.js';
 import {getForViewAndSize} from '../../../../../src/ol/extent.js';
 import {getRenderPixel} from '../../../../../src/ol/render.js';
 
@@ -80,7 +82,8 @@ describe('ol/layer/WebGLTile', function () {
     it('retrieves pixel data', (done) => {
       const layer = new WebGLTileLayer({
         source: new DataTileSource({
-          tilePixelRatio: 1 / 256,
+          tileSize: 1,
+          tileGrid: createXYZ(),
           loader(z, x, y) {
             return new Uint8Array([5, 4, 3, 2, 1]);
           },
@@ -105,7 +108,8 @@ describe('ol/layer/WebGLTile', function () {
     it('preserves the original data type', (done) => {
       const layer = new WebGLTileLayer({
         source: new DataTileSource({
-          tilePixelRatio: 1 / 256,
+          tileSize: 1,
+          tileGrid: createXYZ(),
           loader(z, x, y) {
             return new Float32Array([1.11, 2.22, 3.33, 4.44, 5.55]);
           },
@@ -125,6 +129,77 @@ describe('ol/layer/WebGLTile', function () {
         expect(data[4]).to.roughlyEqual(5.55, 1e-5);
         done();
       });
+    });
+  });
+
+  describe('gutter', () => {
+    let map, target, layer, data;
+    beforeEach((done) => {
+      target = document.createElement('div');
+      target.style.width = '256px';
+      target.style.height = '256px';
+      document.body.appendChild(target);
+
+      layer = new WebGLTileLayer({
+        source: new TileWMS({
+          params: {
+            LAYERS: 'layer',
+          },
+          gutter: 20,
+          url: 'spec/ol/data/wms20.png',
+        }),
+      });
+
+      map = new Map({
+        target: target,
+        pixelRatio: 1,
+        layers: [layer],
+        view: new View({
+          center: [0, 0],
+          zoom: 0,
+        }),
+      });
+
+      map.once('rendercomplete', () => done());
+    });
+
+    afterEach(() => {
+      map.setTarget(null);
+      document.body.removeChild(target);
+    });
+
+    it('gets pixel data', () => {
+      data = layer.getData([76, 114]);
+      expect(data).to.be.a(Uint8ClampedArray);
+      expect(data.length).to.be(4);
+      expect(data[0]).to.be(77);
+      expect(data[1]).to.be(255);
+      expect(data[2]).to.be(77);
+      expect(data[3]).to.be(179);
+
+      data = layer.getData([76, 118]);
+      expect(data).to.be.a(Uint8ClampedArray);
+      expect(data.length).to.be(4);
+      expect(data[0]).to.be(255);
+      expect(data[1]).to.be(77);
+      expect(data[2]).to.be(77);
+      expect(data[3]).to.be(179);
+
+      data = layer.getData([80, 114]);
+      expect(data).to.be.a(Uint8ClampedArray);
+      expect(data.length).to.be(4);
+      expect(data[0]).to.be(255);
+      expect(data[1]).to.be(77);
+      expect(data[2]).to.be(77);
+      expect(data[3]).to.be(179);
+
+      data = layer.getData([80, 118]);
+      expect(data).to.be.a(Uint8ClampedArray);
+      expect(data.length).to.be(4);
+      expect(data[0]).to.be(77);
+      expect(data[1]).to.be(255);
+      expect(data[2]).to.be(77);
+      expect(data[3]).to.be(179);
     });
   });
 
