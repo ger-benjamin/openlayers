@@ -74,6 +74,7 @@ function flash(feature) {
       ratio = inAndOut(1 - elapsedRatio);
     }
 
+    // TODO: A cache could be great here.
     const style = new Style({
       image: new Icon({
         src: 'data/flicc-point.svg',
@@ -87,11 +88,21 @@ function flash(feature) {
   }
 }
 
+/**
+ * TODO: in flicc, this will be done at each cluster layer changes (clusterSource.on('change')):
+ * Take the clusters with last location (per search (selected or all) and target).
+ * flash each cluster like here
+ */
 const doFlash = () => {
+  // on cluster change
   const lastFeature = source
     .getFeatures()
     .find((feature) => feature.get('last'));
   flash(lastFeature);
+};
+
+const loopRendering = () => {
+  // at init only, eventually, add another layer to minimize the load.
   vector.on('postrender', () => {
     vector.changed();
   });
@@ -103,3 +114,4 @@ addRandomFeature();
 addRandomFeature();
 addRandomFeature(true);
 doFlash();
+loopRendering();

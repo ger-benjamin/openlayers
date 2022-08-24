@@ -79,7 +79,6 @@ const map = new Map({
 const saveClusters = [];
 const saveEndFeatures = [];
 
-
 map.on('click', (e) => {
   clusters.getFeatures(e.pixel).then((clickedFeatures) => {
     console.log('------------');
@@ -89,7 +88,7 @@ map.on('click', (e) => {
       }
       // Get clustered Coordinates
       const features = clickedFeatures[0].get('features');
-      features.forEach(f => {
+      features.forEach((f) => {
         if (!saveEndFeatures.includes(f)) {
           saveEndFeatures.push(f);
           //f.set('toto', Math.random());
@@ -97,9 +96,13 @@ map.on('click', (e) => {
       });
       console.log(saveClusters.length);
       console.log(saveEndFeatures.length);
-      saveEndFeatures.forEach(f => {
-          console.log(f.ol_uid);
-      })
+      saveEndFeatures.forEach((f) => {
+        console.log(f.ol_uid);
+      });
     }
   });
 });
+
+//clusterSource.on('change', (event) => {
+//  console.log(event);
+//});
