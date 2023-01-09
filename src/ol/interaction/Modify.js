@@ -780,6 +780,7 @@ class Modify extends PointerInteraction {
     const featureSegments = [centerSegmentData, circumferenceSegmentData];
     centerSegmentData.featureSegments = featureSegments;
     circumferenceSegmentData.featureSegments = featureSegments;
+    // Comment me to remove snapping on center
     this.rBush_.insert(createExtent(coordinates), centerSegmentData);
     let circleGeometry = /** @type {import("../geom/Geometry.js").default} */ (
       geometry
@@ -1097,6 +1098,7 @@ class Modify extends PointerInteraction {
         centerSegmentData.segment[1] = coordinates;
         circumferenceSegmentData.segment[0] = coordinates;
         circumferenceSegmentData.segment[1] = coordinates;
+        // Comment me to remove snapping on center
         this.rBush_.update(createExtent(coordinates), centerSegmentData);
         let circleGeometry = geometry;
         const userProjection = getUserProjection();
