@@ -1,0 +1,21 @@
+---
+layout: example.html
+title: WebGL Heatmap square with FlatGeobuf
+shortdesc: Using a WebGL-optimized layer to render a large quantities of points
+docs: >
+  <p>
+    This example shows how to use a `WebGLPointsLayer` to show a large amount of points on the map.
+    The layer is given a style in JSON format which allows a certain level of customization of the final representation.
+  </p>
+
+  <p>
+    Consult the <a href="/en/latest/apidoc/module-ol_expr_expression.html#~ExpressionValue">documentation on expressions</a> to know which operators to use and how.
+  </p>
+
+tags: "webgl, point, layer, feature, fgb"
+experimental: true
+---
+
+<div id="map" class="map"></div>
+<input type="range" min="0" max="9" value="0" step="1" id="dataset-chooser">
+<textarea disabled style="width: 100%; height: 20rem; font-family: monospace; font-size: small;" id="style-editor"></textarea>
